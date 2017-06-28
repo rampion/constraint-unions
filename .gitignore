@@ -1,0 +1,9 @@
+# files built by cabal go here
+dist
+
+# cabal sandbox and settings
+.cabal-sandbox
+cabal.sandbox.config
+
+# rendered HTML from pandoc
+README.html

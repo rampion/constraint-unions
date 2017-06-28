@@ -1,0 +1,28 @@
+name: constraint-unions
+version: 0.1.0.0
+synopsis: A syntax for unions of constraints
+homepage: http://github.com/rampion/constraint-unions
+license: PublicDomain
+author: Noah Luck Easterly
+maintainer: noah.easterly@gmail.com
+build-type: Simple
+extra-source-files: ChangeLog.md, README.md, ConstraintUnions.lhs
+cabal-version: >=1.10
+
+library
+  exposed-modules: ConstraintUnions
+  build-depends: base >=4.9 && <4.10
+               , markdown-unlit >=0.4.0 && <0.5
+               --, constraints >=0.9.1 && <0.10
+               --, ghc-prim >=0.5.0.0 && <0.6
+  default-language: Haskell2010
+  ghc-options: -pgmL markdown-unlit
+
+test-suite doctests
+  type: exitcode-stdio-1.0
+  main-is: doctests.hs
+  build-depends: base
+               , markdown-unlit >=0.4.0 && <0.5
+               --, constraints >=0.9.1 && <0.10
+               , doctest >=0.11.2 && <0.12
+  default-language: Haskell2010
