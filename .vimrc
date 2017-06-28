@@ -1,7 +1,7 @@
 let &makeprg="cabal"
 nnoremap <Leader>m :make build<CR>
 nnoremap <Leader>t :make test --show-details=always<CR>
-nnoremap <Leader>d :!pandoc -f markdown_github -i README.md -o README.html -s<CR>
+nnoremap <Leader>d :!pandoc -f markdown_github-hard_line_breaks -i README.md -o README.html -s<CR>
 
 " recognize test error locations
 let &errorformat="### Failure in %f:%l: %m," . &errorformat
