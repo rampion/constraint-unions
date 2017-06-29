@@ -118,8 +118,7 @@ value for equality.  There's two obvious ways to define such equality:
 * use `show` to convert the value to a `String`, and use `String`'s definition of equality,
 * use `read` to convert the `String` to a value, and use the value type's definition of equality.
 
-Either one would work, for non-surprisingly for this point in the paper, we've
-got a perfect example function:
+Either one would work, and `||` lets us say so:
 
 ```haskell
 equalsString0 :: forall a. (Show a || (Eq a, Read a)) => a -> String -> Bool
@@ -159,10 +158,10 @@ Structurally, these are very similar to the duplicate instances attempted above
 except that `c` is fully specified here.
 
 In fact, these two fit the boilerplate we'll be using for instances `c || d`
-for unqualified `c`.  If we know `c` always holds, we'll use the former, and if
-we know `c` never holds, we'll use the latter.  Note that neither specifies `d`,
-so we avoid needing quadratic number of instances of `||`, which trend we will
-continue.
+for unqualified `c`.  If `c` always holds, we'll use the former, and if `c`
+never holds, we'll use the latter.  Note that neither specifies `d`, so we
+avoid needing a number of instances of `||` quadratic in the number of
+constraints.
 
 For those of you already sucking on your teeth at the word "boilerplate", I
 promise to return to this later.
@@ -228,17 +227,20 @@ order to tell GHC that we can derive the union of an intersection from the
 intersection of unions:
 
 ```haskell
+inLeft :: forall c d r. c => (c => r) -> (d => r) -> r
+inLeft r _ = r
+
+inRight :: forall c d r. d => (c => r) -> (d => r) -> r
+inRight _ r = r
+
 instance ((c0 || d), (c1 || d)) => (c0, c1) || d where
   resolve = resolve @c0 @d (resolve @c1 @d inLeft inRight) inRight where
 
-    inLeft :: forall c d r. c => (c => r) -> (d => r) -> r
-    inLeft r _ = r
+instance ((c0 || d), ((c1,c2) || d)) => (c0, c1, c2) || d where
+  resolve = resolve @c0 @d (resolve @(c1,c2) @d inLeft inRight) inRight where
 
-    inRight :: forall c d r. d => (c => r) -> (d => r) -> r
-    inRight _ r = r
+-- ... and so on for all reasonable intersection sizes
 ```
-
-
 
 Returning to `equalsString1`, more testing reveals that it has a new
 bug that `equalsString0` didn't:
@@ -257,12 +259,40 @@ True
 
 Curse of the partial `read`!
 
-We could try to catch the exception, and default to using string comparison if
-we get a parse error, which means we'd need a type like
+Well, we can fix this. We'll just add a `Show a` constraint to the left-hand-side
+of the `||`. If there's a bad parse, we'll default to string comparison.
 
-    equalsStringX :: forall a. ((Eq a, Read a, Show a) || Show a) => a -> String -> Bool
+```haskell
+equalsString2 :: forall a. ((Eq a, Read a, Show a) || Show a) => a -> String -> Bool
+equalsString2 = resolve @(Eq a, Read a, Show a) @(Show a)
+  (\a s -> case reads s of [(a', "")] -> a == a' ; _ -> show a == s)
+  (\a s -> show a == s)
+```
 
-If we look at this constraint algebraically, as sums and products, we have:
+And this seems to pass all our smoke tests.
+ 
+```haskell
+{-$-----------------------------------------------------------------------------
+>>> (5 :: Float) `equalsString2` "5"
+True
+>>> (5 :: Float) `equalsString2` "5.000"
+True
+>>> (+) @Int `equalsString2` "(+)"
+...
+    • No instance for (Show (Int -> Int -> Int))
+        arising from a use of ‘equalsString2’
+...
+>>> (5 :: Int) `equalsString2` "5"
+True
+>>> (5 :: Int) `equalsString2` "5.000"
+False
+-}
+```
+
+And we didn't have to define any new instances. That's nice.
+
+If we look at the constraint for `equalsString2` algebraically, as sums and
+products, we have:
 
     Eq * Read * Show + Show
 
@@ -271,7 +301,7 @@ Which, by highschool algebra we know is:
     (Eq * Read + 1) * Show
 
 The sum type `a + 1` has a more familiar name in Haskell - `Maybe a`, so we
-just want the constraint-level equivalent:
+just want the constraint-level equivalent, `MaybeC`:
 
     equalsStringX :: forall a. (MaybeC (Eq a, Read a), Show a) => a -> String -> Bool
 
@@ -306,9 +336,6 @@ type p? a = MaybeC (p a)
 ```
 
 (If you thought `||` was too cute a name, you're going to hate `?`)
-
-Rather than returning to `equalsStringX` to wrestle with `catch` and `unsafePerformIO`,
-let's use a new example to examine `MaybeC`.
 
 # Example: print ALL the values!!!
 
@@ -415,7 +442,6 @@ certain that the only boilerplate instances are the three used above:
 
     -- constraint `C` holds under no conditions
     instance d => (C || d) where resolve = \_ a -> a
-
 
 # Literate Haskell
 
