@@ -394,7 +394,7 @@ instance from above.
 Nobody likes boilerplate, and that is a major drawback. But as complaints go,
 the monotony's only the tip of the iceberg.
 
-Though may have avoided being quadratic in the number of constraints by 
+Though we may have avoided being quadratic in the number of constraints by 
 never specifying the second constraint in the boilerplate, and avoided
 needing to define countably infinite instances by breaking products
 of constraints down, to be complete, we're still linear in the number
